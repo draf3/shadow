@@ -1,14 +1,12 @@
-import sys
-import time
+import sys, random
 from blinker import signal
-from utils.logger import logger
+from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QTimer, QThread, QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import *
+
 import config
-import random
-from glob import glob
-import numpy as np
+from logger import logger
+
 
 class GUI(QWidget):
     trend_id = pyqtSignal(int)
@@ -80,13 +78,8 @@ class GUI(QWidget):
         self.smaller_checkbox = QCheckBox('smaller', self)
         self.smaller_checkbox.setChecked(True)
 
-        self.mask_checkbox = QCheckBox('mask', self)
-        # self.mask_checkbox.setChecked(True)
-
         self.capture_checkbox = QCheckBox('capture', self)
         # self.capture_checkbox.setChecked(True)
-
-        self.mask_path_textbox = QLineEdit(self.rand_mask_path(), self)
 
         self.save_checkbox = QCheckBox('save', self)
         # self.save_checkbox.setChecked(True)
@@ -156,11 +149,6 @@ class GUI(QWidget):
         morphology_hbox.addWidget(self.morphology_k_spinbox)
         morphology_hbox.addStretch(1)
 
-        mask_hbox = QHBoxLayout()
-        mask_hbox.addWidget(self.mask_checkbox)
-        mask_hbox.addWidget(self.mask_path_textbox)
-        mask_hbox.addStretch(1)
-
         image_hbox = QHBoxLayout()
         image_hbox.addWidget(self.image_input_label)
         image_hbox.addWidget(self.image_preprocess_label)
@@ -180,7 +168,6 @@ class GUI(QWidget):
         vbox.addWidget(self.invert_checkbox)
         vbox.addWidget(self.blend_checkbox)
         vbox.addWidget(self.smaller_checkbox)
-        vbox.addLayout(mask_hbox)
         vbox.addWidget(self.capture_checkbox)
         vbox.addWidget(self.save_checkbox)
         vbox.addLayout(generate_hbox)
@@ -238,10 +225,6 @@ class GUI(QWidget):
     def morphology_k(self):
         return self.morphology_k_spinbox.value()
 
-    @property
-    def mask_path(self):
-        return self.mask_path_textbox.text()
-
     def is_binary(self):
         return self.binary_checkbox.isChecked()
 
@@ -262,9 +245,6 @@ class GUI(QWidget):
 
     def is_smaller(self):
         return self.smaller_checkbox.isChecked()
-
-    def is_mask(self):
-        return self.mask_checkbox.isChecked()
 
     def is_capture(self):
         return self.capture_checkbox.isChecked()
@@ -302,16 +282,9 @@ class GUI(QWidget):
             self.trend_combobox.setCurrentIndex(next_idx)
 
         if self.auto_checkbox.isChecked():
-            mask_path = self.rand_mask_path()
-            self.mask_path_textbox.setText(mask_path)
             self.generate_sentence_handler()
         else:
             self.is_running = False
-
-    def rand_mask_path(self):
-        paths = glob('images/*.png')
-        img_paths = np.random.choice(paths, size=1)
-        return img_paths[0]
 
     def closeEvent(self, e):
         sys.exit()

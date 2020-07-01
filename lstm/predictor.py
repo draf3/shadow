@@ -4,13 +4,12 @@ from keras.layers import Dense, Activation
 from keras.layers import LSTM
 from keras.optimizers import RMSprop
 import tensorflow as tf
-from tensorflow.python.keras.backend import set_session, clear_session
+from tensorflow.python.keras.backend import set_session
 import numpy as np
 import sys
 import io
-import time
 import config
-from utils.logger import logger
+from logger import logger
 from blinker import signal
 import re
 import random

@@ -1,9 +1,8 @@
 import subprocess
 import winsound
-from datetime import datetime
 import os
 from blinker import signal
-from utils.logger import logger
+from logger import logger
 import config
 import traceback
 

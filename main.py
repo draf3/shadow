@@ -1,6 +1,4 @@
 import sys
-import time
-import threading
 from PyQt5.QtWidgets import QApplication
 from blinker import signal
 import config
@@ -8,7 +6,6 @@ from cyclegan.cyclegan import CycleGAN
 from lstm.predictor import Predictor
 from gui import GUI
 from jtalk import JTalk
-from utils.logger import logger
 
 sys.setrecursionlimit(2000)
 
@@ -44,7 +41,6 @@ def run():
                 gan.is_invert = gui.is_invert()
                 gan.is_blend = gui.is_blend()
                 gan.is_smaller = gui.is_smaller()
-                gan.is_mask = gui.is_mask()
                 gan.is_capture = gui.is_capture()
                 gan.max_frame = gui.max_frame
                 gan.binary_t = gui.binary_t
@@ -53,7 +49,6 @@ def run():
                 gan.canny_t1 = gui.canny_t1
                 gan.canny_t2 = gui.canny_t2
                 gan.morphology_k = gui.morphology_k
-                gan.mask_path = gui.mask_path
                 jtalk.dst_audio_dir = dst_audio_dir
                 jtalk.is_save = gui.is_save()
                 if gui.is_save():

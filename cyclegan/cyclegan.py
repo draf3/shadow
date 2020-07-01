@@ -6,8 +6,7 @@ from keras.layers.convolutional import UpSampling2D, Conv2D
 from keras.models import Model
 from keras.optimizers import Adam
 import tensorflow as tf
-from tensorflow.python.keras.backend import set_session, clear_session
-import datetime
+from tensorflow.python.keras.backend import set_session
 import numpy as np
 import cv2
 import os
@@ -18,7 +17,7 @@ from blinker import signal
 import traceback
 import config
 from cyclegan.data_loader import DataLoader
-from utils.logger import logger
+from logger import logger
 from capturer import Capturer
 
 
@@ -39,7 +38,6 @@ class CycleGAN():
         self.morphology_k = 5
         self.canny_t1 = 100
         self.canny_t2 = 200
-        self.mask_path = 'images'
         self.prev_src = None
 
         self.is_binary = False
@@ -49,7 +47,6 @@ class CycleGAN():
         self.is_invert = False
         self.is_blend = False
         self.is_smaller = False
-        self.is_mask = False
         self.is_capture = None
         # Input shape
         self.img_rows = 256
@@ -221,23 +218,6 @@ class CycleGAN():
 
                 src = origin
 
-                if self.is_mask:
-                    # mask_paths = glob('%s/*.png' % self.mask_path)
-                    # mask_paths = np.random.choice(mask_paths, size=1)
-                    # img_mask = cv2.imread(mask_paths[0])
-                    # src = cv2.bitwise_and(src, img_mask)
-
-                    img_mask = cv2.imread(self.mask_path)
-                    img_mask = cv2.GaussianBlur(img_mask, (self.blur_ax, self.blur_ay), 0)
-                    src = cv2.bitwise_and(src, img_mask)
-
-                    # img_mask = cv2.imread('images/frame/frame256x256.png', -1)
-                    # alpha = img_mask[:, :, 3]
-                    # alpha = np.array(alpha / 255.0, dtype=np.float32)
-                    # alpha = cv2.cvtColor(alpha, cv2.COLOR_GRAY2BGR)
-                    # src = np.array(src * (1.0 - alpha),  dtype=np.uint8)
-
-
                 if self.is_blur:
                     src = cv2.GaussianBlur(src, (self.blur_ax, self.blur_ay), 0)
 
@@ -256,14 +236,6 @@ class CycleGAN():
 
                 if self.is_invert:
                     src = cv2.bitwise_not(src)
-
-                # if self.is_mask:
-                #     # mask_paths = glob('%s/*.png' % self.mask_path)
-                #     # mask_paths = np.random.choice(mask_paths, size=1)
-                #     # img_mask = cv2.imread(mask_paths[0])
-                #     img_mask = cv2.imread(self.mask_path)
-                #     img_mask = cv2.GaussianBlur(img_mask, (self.blur_ax, self.blur_ay), 0)
-                #     src = cv2.bitwise_and(src, img_mask)
 
                 # src = (src * 0.5 + (127.5 / 2.0)).astype(np.float32)
 
