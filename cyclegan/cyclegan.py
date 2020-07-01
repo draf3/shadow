@@ -349,9 +349,6 @@ class CycleGAN():
                         self.save_imgs(fake_B, dst_img_dir)
                         self.frame += 1
 
-                    # 画像をSpout用のフォーマットに変換する
-                    self.simg = self.convert_spout(fake_B)
-
                     # pyqtで画像の描画イベントを送信
                     self.on_render_img.send(img=self.qimg)
                     QtTest.QTest.qWait(int(1000 / self.framerate))
@@ -364,12 +361,6 @@ class CycleGAN():
 
             except Exception as e:
                 print(traceback.format_exc())
-
-    def convert_spout(self, img):
-        simg = np.concatenate(img)
-        simg = 0.5 * simg + 0.5
-        simg = np.array(simg * 255.0, dtype=np.uint8)
-        return simg
 
     def convert_pyqt(self, img_h_l, img_h_c, img_h_r):
         _img_h_l = cv2.cvtColor(img_h_l, cv2.COLOR_BGR2RGB)

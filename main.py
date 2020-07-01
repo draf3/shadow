@@ -6,7 +6,6 @@ from blinker import signal
 import config
 from cyclegan.cyclegan import CycleGAN
 from lstm.predictor import Predictor
-from spout import SPOUT
 from gui import GUI
 from jtalk import JTalk
 from utils.logger import logger
@@ -64,22 +63,14 @@ def run():
 
         prev_trend_idx = gui.trend_idx
 
-def run_spout():
-    spout = SPOUT()
-    while True:
-        time.sleep(0.01)
-        spout.render(gan.simg)
 
-if __name__ == '__main__':
-
+def main():
+    global jtalk, gui, lstm, gan
     app = QApplication(sys.argv)
-
-    #JTalk
+    # JTalk
     jtalk = JTalk()
-
     # GUI
     gui = GUI()
-
     # GUI Event
     on_predicted_sentence = signal(config.EVENT['ON_PREDICTED_SENTENCE'])
     on_predicted_sentence.connect(gui.predicted_sentence_handler)
@@ -89,31 +80,16 @@ if __name__ == '__main__':
     on_render_img.connect(gui.render_img_handler)
     on_start_jtalk = signal(config.EVENT['ON_START_JTALK'])
     on_start_jtalk.connect(jtalk.say)
-
     # LSTM
     lstm = init_lstm()
-
     # CycleGAN
     gan = CycleGAN()
-
     # CycleGAN Event
     on_changed_framerate = signal(config.EVENT['ON_CHANGED_FRAMERATE'])
     on_changed_framerate.connect(gan.changed_framerate_handler)
-
-
-    threads = []
-    t = threading.Thread(target=run_spout)
-    t.setDaemon(True)
-    t.start()
-    threads.append(t)
-
-    # Spout
-    # t = threading.Thread(target=run_spout)
-    # t.setDaemon(True)
-    # t.start()
-    # threads.append(t)
-
-    # Loop
     run()
-
     sys.exit(gui.exec_())
+
+
+if __name__ == '__main__':
+    main()
