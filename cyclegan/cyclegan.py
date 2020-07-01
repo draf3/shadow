@@ -18,7 +18,7 @@ import traceback
 import config
 from cyclegan.data_loader import DataLoader
 from logger import logger
-from capturer import Capturer
+from cyclegan.capturer import Capturer
 
 
 class CycleGAN():
