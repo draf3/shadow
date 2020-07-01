@@ -1,0 +1,11 @@
+*.json
+*.h5
+*.hdf5
+.DS_Store
+*/datasets
+*/images
+cyclegan/trend_images
+images
+lstm/data
+.idea
+__pycache__
