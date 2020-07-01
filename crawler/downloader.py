@@ -3,9 +3,9 @@ import os
 import datetime
 import time
 import csv
-from dl.googlesearch import GoogleSearch
-from dl.twittersearch import TwitterSearch
-from dl.emotionanalysis import EmotionAnalysis
+from crawler.googlesearch import GoogleSearch
+from crawler.twittersearch import TwitterSearch
+from crawler.emotionanalysis import EmotionAnalysis
 # from multiprocessing import Process
 # import lstm.app
 
