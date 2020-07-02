@@ -10,21 +10,19 @@ import sys
 import io
 import config
 from logger import logger
-from blinker import signal
 import re
 import random
 from PyQt5.QtWidgets import *
 import traceback
 
-class Predictor:
-    def __init__(self, trend_id, text_path, model_path):
+
+class Predictor():
+    def __init__(self, data_path, model_path):
         self.sess = tf.Session()
         self.graph = tf.get_default_graph()
         set_session(self.sess)
 
-        self.trend_id = trend_id
-
-        with io.open(text_path, encoding='utf-8') as f:
+        with io.open(data_path, encoding='utf-8') as f:
             self.text = f.read().lower()
         logger.debug(f'corpus length:{len(self.text)}')
 
@@ -68,8 +66,6 @@ class Predictor:
         optimizer = RMSprop(lr=0.01)
         self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
-        self.on_predicted_sentence = signal(config.EVENT['ON_PREDICTED_SENTENCE'])
-        self.on_start_jtalk = signal(config.EVENT['ON_START_JTALK'])
 
     def sample(self, preds, temperature=1.0):
         preds = np.asarray(preds).astype('float64')
@@ -79,8 +75,7 @@ class Predictor:
         probas = np.random.multinomial(1, preds, 1)
         return np.argmax(probas)
 
-    def predict(self, _):
-        # logger.debug(f'id: {self.trend_id}, predict.')
+    def predict(self):
         with self.graph.as_default():
             set_session(self.sess)
 
@@ -118,10 +113,7 @@ class Predictor:
                 print(traceback.format_exc())
 
             finally:
-                if not generated:
-                    generated = ''
-                self.on_predicted_sentence.send(sentence=generated)
-                self.on_start_jtalk.send(sentence=generated)
+                return generated
 
     def generate_character(self, diversity, sentence, generated):
         x_pred = np.zeros((1, self.maxlen, len(self.chars)))
@@ -138,9 +130,4 @@ class Predictor:
         sys.stdout.write(next_char)
         sys.stdout.flush()
 
-
-
         return new_sentence, new_generated, next_char
-
-    def __repr__(self):
-        return '<AltProcessor %s>' % self.trend_id

@@ -9,11 +9,10 @@ import tensorflow as tf
 from tensorflow.python.keras.backend import set_session
 import numpy as np
 import cv2
-import os
+import os, time
 from glob import glob
 from PyQt5.QtGui import QImage
 from PyQt5 import QtTest
-from blinker import signal
 import traceback
 import config
 from cyclegan.data_loader import DataLoader
@@ -21,40 +20,26 @@ from logger import logger
 from cyclegan.capturer import Capturer
 
 
-class CycleGAN():
-    def __init__(self):
+class Predictor:
+    def __init__(self, gui):
+        self.gui = gui
+        self.prev_src = None
+        self.capturer = None
+        # self.prev_trend_idx = 0
+        self.count = 0
+
         self.sess = tf.Session()
         self.graph = tf.get_default_graph()
         set_session(self.sess)
         self.simg = None
         self.qimg = None
         self.out_size = 256
-        self.max_frame = 200
-        self.framerate = 60
-        self.frame = 0
-        self.binary_t = 127
-        self.blur_ax = 5
-        self.blur_ay = 5
-        self.morphology_k = 5
-        self.canny_t1 = 100
-        self.canny_t2 = 200
-        self.prev_src = None
 
-        self.is_binary = False
-        self.is_blur = False
-        self.is_canny = False
-        self.is_morphology = False
-        self.is_invert = False
-        self.is_blend = False
-        self.is_smaller = False
-        self.is_capture = None
         # Input shape
         self.img_rows = 256
         self.img_cols = 256
         self.channels = 3
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
-
-        self.capturer = None
 
         # Configure data loader
         self.data_loader = DataLoader(img_res=(self.img_rows, self.img_cols))
@@ -128,8 +113,6 @@ class CycleGAN():
                             optimizer=optimizer)
         self.load_model()
 
-        self.on_render_img = signal(config.EVENT['ON_RENDER_IMG'])
-
     def build_generator(self):
         """U-Net Generator"""
 
@@ -190,15 +173,18 @@ class CycleGAN():
 
         return Model(img, validity)
 
-    def predict(self, img_dir, dst_img_dir=None):
+    def predict(self):
         with self.graph.as_default():
             set_session(self.sess)
 
             try:
+                trend_key = [k for k, v in config.TREND.items() if v['NAME'] == self.gui.trend_name][0]
+                src_img_dir = config.TREND[trend_key]['CYCLEGAN_IMG_DIR']
+
                 img_A = None
                 fake_B = None
 
-                if self.is_capture:
+                if self.gui.is_capture():
                     if self.capturer is None:
                         self.capturer = Capturer()
 
@@ -208,39 +194,35 @@ class CycleGAN():
                         frame = self.capturer.frame
                         origin = frame[60:420, 140:500]
                         origin = cv2.resize(origin, dsize=(self.img_rows, self.img_cols))
-                        # origin = np.reshape(origin, (1, 256, 256, 3))
-                        # origin = np.array(origin) / 127.5 - 1
 
                 else:
-                    paths = glob('%s/*.jpg' % img_dir)
+                    paths = glob('%s/*.jpg' % src_img_dir)
                     img_paths = np.random.choice(paths, size=1)
                     origin = cv2.imread(img_paths[0])
 
                 src = origin
 
-                if self.is_blur:
-                    src = cv2.GaussianBlur(src, (self.blur_ax, self.blur_ay), 0)
+                if self.gui.is_blur():
+                    src = cv2.GaussianBlur(src, (self.gui.blur_ax, self.gui.blur_ay), 0)
 
-                if self.is_binary:
+                if self.gui.is_binary():
                     src = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
-                    src = cv2.threshold(src, self.binary_t, 255, cv2.THRESH_BINARY)[1]
+                    src = cv2.threshold(src, self.gui.binary_t, 255, cv2.THRESH_BINARY)[1]
                     src = cv2.cvtColor(src, cv2.COLOR_GRAY2BGR)
 
-                if self.is_canny:
-                    src = cv2.Canny(src, self.canny_t1, self.canny_t2)
+                if self.gui.is_canny():
+                    src = cv2.Canny(src, self.gui.canny_t1, self.gui.canny_t2)
                     src = cv2.cvtColor(src, cv2.COLOR_GRAY2BGR)
 
-                if self.is_morphology:
-                    kernel = np.ones((self.morphology_k, self.morphology_k), np.uint8)
+                if self.gui.is_morphology():
+                    kernel = np.ones((self.gui.morphology_k, self.gui.morphology_k), np.uint8)
                     src = cv2.morphologyEx(src, cv2.MORPH_CLOSE, kernel)
 
-                if self.is_invert:
+                if self.gui.is_invert():
                     src = cv2.bitwise_not(src)
 
-                # src = (src * 0.5 + (127.5 / 2.0)).astype(np.float32)
-
                 # 画像処理
-                if self.is_smaller:
+                if self.gui.is_smaller():
                     bg = np.zeros(src.shape, dtype=np.uint8)
                     h, w = src.shape[:2]
                     simg = cv2.resize(src, dsize=(int(w / 2), int(h / 2)))
@@ -253,10 +235,10 @@ class CycleGAN():
                     bg[edge_t:edge_b, edge_l:edge_r, :] = simg[:, :, :]
                     src = bg
 
-                cur_framerate = self.framerate
+                cur_framerate = self.gui.framerate
 
-                for i in range(self.max_frame):
-                    if cur_framerate != self.framerate:
+                for i in range(self.gui.frame_par_image):
+                    if cur_framerate != self.gui.framerate:
                         break
 
                     # 初回は前フレームも同じ画像を使う
@@ -268,15 +250,14 @@ class CycleGAN():
                         img_A = self.data_loader.format(src_rgb)
 
                     # ブレンドモードは2枚の画像をなめらかに変化させる
-                    if self.is_blend:
-                        weight = i / self.max_frame
+                    if self.gui.is_blend():
+                        weight = i / self.gui.frame_par_image
                         blend_img = cv2.addWeighted(self.prev_src, 1 - weight, src, weight, 0)
                         src_rgb = cv2.cvtColor(blend_img, cv2.COLOR_BGR2RGB)
                         img_A = self.data_loader.format(src_rgb)
                         img_A = img_A.astype(np.float32)
                         fake_B = self.g_AB.predict(img_A)
                         fake_B = self.g_AB.predict(fake_B)
-
                     else:
                         src_rgb = cv2.cvtColor(src, cv2.COLOR_BGR2RGB)
                         img_A = img_A.astype(np.float32)
@@ -291,42 +272,38 @@ class CycleGAN():
                     contours, hierarchy = cv2.findContours(mask_fake_B, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
                     mask_fake_B = np.zeros(self.img_shape, dtype=np.uint8)
-                    # mask_edge = np.ones(self.img_shape, dtype=np.uint8) * 255
                     for i in range(0, len(contours)):
                         if len(contours[i]) > 0:
                             if cv2.contourArea(contours[i]) < 500:
                                 continue
                             cv2.drawContours(mask_fake_B, contours, i, (255,255,255), -1)
-                            # cv2.drawContours(mask_edge, contours, i, (100,100,100), 10)
 
-                    # kernel = np.ones((5, 5), np.uint8)
-                    # mask_fake_B = cv2.erode(mask_fake_B, kernel, iterations=2)
-                    mask_fake_B = cv2.GaussianBlur(mask_fake_B, (self.blur_ax, self.blur_ay), 0)
+                    mask_fake_B = cv2.GaussianBlur(mask_fake_B, (self.gui.blur_ax, self.gui.blur_ay), 0)
 
                     alpha = np.array(mask_fake_B / 255.0, dtype=np.float32)
                     img_fake_B = np.array(img_fake_B * alpha,  dtype=np.uint8)
                     img_fake_B = np.array(img_fake_B * alpha, dtype=np.uint8)
-
-                    # cv2.imshow("image", img_fake_B)
 
                     img_fake_B = cv2.cvtColor(img_fake_B, cv2.COLOR_BGR2RGB)
                     img_fake_B = np.array(img_fake_B, dtype=np.float32)
                     fake_B = self.data_loader.format(img_fake_B)
 
                     self.qimg = self.convert_pyqt(origin, src_rgb, fake_B)
-                    # self.show_img_portrait(fake_B)
+
+                    trend_key = [k for k, v in config.TREND.items() if v['NAME'] == self.gui.trend_name][0]
+                    dst_img_dir = config.TREND[trend_key]['DST_IMG_DIR']
 
                     # 画像を保存する
-                    if dst_img_dir:
+                    if self.gui.is_save():
                         self.save_imgs(fake_B, dst_img_dir)
-                        self.frame += 1
 
-                    # pyqtで画像の描画イベントを送信
-                    self.on_render_img.send(img=self.qimg)
-                    QtTest.QTest.qWait(int(1000 / self.framerate))
+                    # pyqtで画像の描画
+                    self.gui.render_img(self.qimg)
+
+                    QtTest.QTest.qWait(int(1000 / self.gui.framerate))
 
                     # ブレンドモードでなければ生成画像をフィードバックループする
-                    if not self.is_blend:
+                    if not self.gui.is_blend():
                         img_A = fake_B
 
                 self.prev_src = src
@@ -341,7 +318,6 @@ class CycleGAN():
         _img_h_r = np.concatenate(img_h_r)
         _img_h_r = 0.5 * _img_h_r + 0.5
         _img_h = cv2.hconcat([_img_h_l, _img_h_c, _img_h_r])
-        # _img_h = cv2.cvtColor(_img_h, cv2.COLOR_BGR2RGB)
         _img_h = np.array(_img_h * 255.0, dtype=np.uint8)
         _h, _w = _img_h.shape[:2]
         return QImage(_img_h.flatten(), _w, _h, QImage.Format_RGB888)
@@ -359,45 +335,19 @@ class CycleGAN():
         load(self.combined, "cyclegan_combined")
 
     def save_imgs(self, img, dst_img_dir):
-        if not os.path.exists(dst_img_dir):
+
+        if os.path.exists(dst_img_dir):
+            path = dst_img_dir + '/{}.jpg'.format(self.count)
+            dst = np.concatenate(img)
+            dst = 0.5 * dst + 0.5
+            dst = np.array(dst * 255.0, dtype=np.uint8)
+            dst = cv2.cvtColor(dst, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(path, dst)
+            self.count += 1
+
+        else:
             os.makedirs(dst_img_dir)
+            self.count = 0
             logger.debug('make dir %s' % dst_img_dir)
+            # QtTest.QTest.qWait(1000)
 
-        # path = dst_img_dir + '/{:05d}.jpg'.format(self.frame)
-        path = dst_img_dir + '/{}.jpg'.format(self.frame)
-
-        dst = np.concatenate(img)
-        dst = 0.5 * dst + 0.5
-        dst = np.array(dst * 255.0, dtype=np.uint8)
-        dst = cv2.cvtColor(dst, cv2.COLOR_RGB2BGR)
-        # cv2.imshow("dst", dst)
-        cv2.imwrite(path, dst)
-
-    def show_img_portrait(self, img):
-        src = np.concatenate(img)
-        src = 0.5 * src + 0.5
-        src = np.array(src * 255.0, dtype=np.uint8)
-        src = cv2.cvtColor(src, cv2.COLOR_RGB2BGR)
-
-        h = 336
-        w = 168
-        ch = 3
-
-        # edge_t = int(h/4)
-        # edge_b = int(h/4*3)
-        # simg = cv2.resize(src, dsize=(w, w))
-        # bg = np.zeros((h, w, ch), dtype=np.uint8)
-        # bg[edge_t:edge_b, :, :] = simg
-
-        edge_l = int(h / 4)
-        edge_r = int(h / 4 * 3)
-        img_l = cv2.resize(src, dsize=(h, h))
-        bg = np.zeros((h, w, ch), dtype=np.uint8)
-
-        bg = img_l[:, edge_l:edge_r, :]
-
-        cv2.imshow("dst", bg)
-
-
-    def changed_framerate_handler(self, framerate):
-        self.framerate = framerate
