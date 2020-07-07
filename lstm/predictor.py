@@ -17,54 +17,58 @@ import traceback
 
 
 class Predictor():
-    def __init__(self, data_path, model_path):
+    def __init__(self, gui):
         self.sess = tf.Session()
         self.graph = tf.get_default_graph()
         set_session(self.sess)
+        self.gui = gui
 
-        with io.open(data_path, encoding='utf-8') as f:
-            self.text = f.read().lower()
-        logger.debug(f'corpus length:{len(self.text)}')
+    def setup(self, input_texts_path, lstm_model_path):
+        with self.graph.as_default():
+            set_session(self.sess)
+            with io.open(input_texts_path, encoding='utf-8') as f:
+                self.text = f.read().lower()
+            logger.debug(f'corpus length:{len(self.text)}')
 
-        self.end_point_indexes = [str.end() for str in re.finditer('。', self.text)]
+            self.end_point_indexes = [str.end() for str in re.finditer('。', self.text)]
 
-        self.chars = sorted(list(set(self.text)))
-        logger.debug(f'total chars:{len(self.chars)}')
+            self.chars = sorted(list(set(self.text)))
+            logger.debug(f'total chars:{len(self.chars)}')
 
-        self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
-        self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
+            self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
+            self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
-        self.max_sentence = 200
-        self.maxlen = 10
-        self.temperature = 0.2
-        step = 1
-        sentences = []
-        next_chars = []
+            self.max_sentence = 200
+            self.maxlen = 10
+            self.temperature = 0.2
+            step = 1
+            sentences = []
+            next_chars = []
 
-        for i in range(0, len(self.text) - self.maxlen, step):
-            sentences.append(self.text[i: i + self.maxlen])
-            next_chars.append(self.text[i + self.maxlen])
-        logger.debug(f'nb sequences:{len(sentences)}')
-        logger.debug(sentences)
-        logger.debug(next_chars)
+            for i in range(0, len(self.text) - self.maxlen, step):
+                sentences.append(self.text[i: i + self.maxlen])
+                next_chars.append(self.text[i + self.maxlen])
+            logger.debug(f'nb sequences:{len(sentences)}')
+            logger.debug(sentences)
+            logger.debug(next_chars)
 
-        logger.debug('Vectorization...')
-        x = np.zeros((len(sentences), self.maxlen, len(self.chars)), dtype=np.bool)
-        y = np.zeros((len(sentences), len(self.chars)), dtype=np.bool)
-        for i, sentence in enumerate(sentences):
-            for t, char in enumerate(sentence):
-                x[i, t, self.char_indices[char]] = 1
-            y[i, self.char_indices[next_chars[i]]] = 1
+            logger.debug('Vectorization...')
+            x = np.zeros((len(sentences), self.maxlen, len(self.chars)), dtype=np.bool)
+            y = np.zeros((len(sentences), len(self.chars)), dtype=np.bool)
+            for i, sentence in enumerate(sentences):
+                for t, char in enumerate(sentence):
+                    x[i, t, self.char_indices[char]] = 1
+                y[i, self.char_indices[next_chars[i]]] = 1
 
-        self.model = Sequential()
-        self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
-        self.model.add(Dense(len(self.chars)))
-        self.model.add(Activation('softmax'))
+            self.model = Sequential()
+            self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
+            self.model.add(Dense(len(self.chars)))
+            self.model.add(Activation('softmax'))
 
-        self.model.load_weights(model_path)
+            self.model.load_weights(lstm_model_path)
 
-        optimizer = RMSprop(lr=0.01)
-        self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
+            optimizer = RMSprop(lr=0.01)
+            self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
 
     def sample(self, preds, temperature=1.0):

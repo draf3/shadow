@@ -18,19 +18,17 @@ class JTalk:
         self.count = 0
         # self.prev_trend_idx = 0
 
-    def say(self, sentence):
+    def say(self, sentence, output_audios_dir):
         try:
-            trend_key = [k for k, v in config.TREND.items() if v['NAME'] == self.gui.trend_name][0]
-            dst_audio_dir = config.TREND[trend_key]['DST_AUDIO_DIR']
 
             if self.gui.is_save():
-                if not os.path.exists(dst_audio_dir):
-                    os.makedirs(dst_audio_dir)
+                if not os.path.exists(output_audios_dir):
+                    os.makedirs(output_audios_dir)
                     self.count = 0
-                    logger.debug('make dir %s' % dst_audio_dir)
+                    logger.debug('make dir %s' % output_audios_dir)
 
                 name = '{}.wav'.format(self.count)
-                path = os.path.join(dst_audio_dir, name)
+                path = os.path.join(output_audios_dir, name)
                 outwav = ['-ow', path]
 
             else:

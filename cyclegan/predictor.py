@@ -18,6 +18,7 @@ import config
 from cyclegan.data_loader import DataLoader
 from logger import logger
 from cyclegan.capturer import Capturer
+import util
 
 
 class Predictor:
@@ -173,13 +174,11 @@ class Predictor:
 
         return Model(img, validity)
 
-    def predict(self):
+    def predict(self, input_images_dir, output_images_dir):
         with self.graph.as_default():
             set_session(self.sess)
 
             try:
-                trend_key = [k for k, v in config.TREND.items() if v['NAME'] == self.gui.trend_name][0]
-                src_img_dir = config.TREND[trend_key]['CYCLEGAN_IMG_DIR']
 
                 img_A = None
                 fake_B = None
@@ -196,9 +195,11 @@ class Predictor:
                         origin = cv2.resize(origin, dsize=(self.img_rows, self.img_cols))
 
                 else:
-                    paths = glob('%s/*.jpg' % src_img_dir)
+                    paths = glob('%s/*.jpg' % input_images_dir)
                     img_paths = np.random.choice(paths, size=1)
-                    origin = cv2.imread(img_paths[0])
+                    img_array = np.fromfile(img_paths[0], dtype=np.uint8)
+                    origin = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                    # origin = cv2.imread(img_paths[0])
 
                 src = origin
 
@@ -290,12 +291,9 @@ class Predictor:
 
                     self.qimg = self.convert_pyqt(origin, src_rgb, fake_B)
 
-                    trend_key = [k for k, v in config.TREND.items() if v['NAME'] == self.gui.trend_name][0]
-                    dst_img_dir = config.TREND[trend_key]['DST_IMG_DIR']
-
                     # 画像を保存する
                     if self.gui.is_save():
-                        self.save_imgs(fake_B, dst_img_dir)
+                        self.save_imgs(fake_B, output_images_dir)
 
                     # pyqtで画像の描画
                     self.gui.render_img(self.qimg)
@@ -334,20 +332,20 @@ class Predictor:
         load(self.g_BA, "cyclegan_g_BA")
         load(self.combined, "cyclegan_combined")
 
-    def save_imgs(self, img, dst_img_dir):
+    def save_imgs(self, img, output_images_dir):
 
-        if os.path.exists(dst_img_dir):
-            path = dst_img_dir + '/{}.jpg'.format(self.count)
+        if os.path.exists(output_images_dir):
+            path = os.path.join(output_images_dir, '{}.jpg'.format(self.count))
             dst = np.concatenate(img)
             dst = 0.5 * dst + 0.5
             dst = np.array(dst * 255.0, dtype=np.uint8)
             dst = cv2.cvtColor(dst, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(path, dst)
+            util.imwrite(path, dst)
             self.count += 1
 
         else:
-            os.makedirs(dst_img_dir)
+            os.makedirs(output_images_dir)
             self.count = 0
-            logger.debug('make dir %s' % dst_img_dir)
+            logger.debug('make dir %s' % output_images_dir)
             # QtTest.QTest.qWait(1000)
 

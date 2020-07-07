@@ -18,6 +18,8 @@ import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(InsecureRequestWarning)
 
+import config
+
 
 class GoogleSearch:
     '''
@@ -51,13 +53,7 @@ class GoogleSearch:
     ##### add searchword to argument
     # Googleを巡回して一連の処理を実行する。
     # searchwordで検索した画像をダウンロードする
-    def download_google_staticimages(self, searchword):
-
-        # ディレクトリが存在してなければ作る
-        dirs = 'pictures/' + searchword
-        if not os.path.exists(dirs):
-            os.makedirs(dirs)
-
+    def download_google_staticimages(self, searchword, dir):
         # chromedricerでURLを巡回する
         searchurl = 'https://www.google.com/search?q=' + searchword + '&source=lnms&tbm=isch'
         options = webdriver.ChromeOptions()
@@ -130,7 +126,7 @@ class GoogleSearch:
                 try:
                     res = requests.get(url, verify=False, stream=True)
                     rawdata = res.raw.read()
-                    with open(os.path.join(dirs, 'img_' + str(count) + '.jpg'), 'wb') as f:
+                    with open(os.path.join(dir, str(count) + '.jpg'), 'wb') as f:
                         f.write(rawdata)
                         count += 1
                 except Exception as e:

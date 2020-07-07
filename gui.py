@@ -6,7 +6,13 @@ from PyQt5.QtCore import *
 import config
 from logger import logger
 from cyclegan.cyclegan_worker import CycleganWorker
+from cyclegan.predictor import Predictor as CycleGANPredictor
 from lstm.lstm_worker import LSTMWorker
+from lstm.predictor import Predictor as LSTMPredictor
+from lstm.trainer import Trainer
+from crawler.downloader import Downloader
+from app_worker import AppWorker
+from trend_store import TrendStore
 
 class GUI(QWidget):
     def __init__(self):
@@ -54,21 +60,22 @@ class GUI(QWidget):
         self.smaller_checkbox.setChecked(True)
         self.capture_checkbox = QCheckBox('capture', self)
         self.save_checkbox = QCheckBox('save', self)
+        self.save_checkbox.setChecked(True)
         self.image_input_label = QLabel("input")
         self.image_preprocess_label = QLabel("preprocess")
         self.image_output_label = QLabel("output")
         self.image = QLabel(self)
-        self.trend_combobox = QComboBox(self)
+        # self.trend_combobox = QComboBox(self)
 
-        for i, key in enumerate(config.TREND):
-            name = config.TREND[key]['NAME']
-            self.trend_combobox.addItem(name)
+        # for i, key in enumerate(config.TREND):
+        #     name = config.TREND[key]['NAME']
+        #     self.trend_combobox.addItem(name)
 
         self.random_checkbox = QCheckBox('random', self)
         self.sentence_text = QLabel("", self)
         self.sentence_text.resize(512, 100)
         self.sentence_text.setWordWrap(True)
-        generate_sentence_btn = QPushButton("generate sentence", self)
+        generate_btn = QPushButton("generate", self)
 
         # Layout
         framerate_hbox = QHBoxLayout()
@@ -80,10 +87,10 @@ class GUI(QWidget):
         maxframe_hbox.addWidget(self.frame_par_image_label)
         maxframe_hbox.addStretch(1)
         trend_hbox = QHBoxLayout()
-        trend_hbox.addWidget(self.trend_combobox)
+        # trend_hbox.addWidget(self.trend_combobox)
         trend_hbox.addWidget(self.random_checkbox)
         generate_hbox = QHBoxLayout()
-        generate_hbox.addWidget(generate_sentence_btn)
+        generate_hbox.addWidget(generate_btn)
         blur_hbox = QHBoxLayout()
         blur_hbox.addWidget(self.blur_checkbox)
         blur_hbox.addWidget(self.blur_ax_spinbox)
@@ -131,19 +138,21 @@ class GUI(QWidget):
         self.title = 'shadow app'
         self.show()
 
+        self.trend_store = TrendStore()
+        self.trainer = Trainer(self)
+        self.cyclegan_predictor = CycleGANPredictor(self)
+        self.lstm_predictor = LSTMPredictor(self)
+
+
         # Thread
         self.threadpool = QThreadPool()
-        self.cyclegan_worker = CycleganWorker(self)
-        self.threadpool.start(self.cyclegan_worker)
-        self.lstm_worker = LSTMWorker(self)
+        self.app_worker = AppWorker(self)
+        # self.downloader = Downloader(self)
+        # self.cyclegan_worker = CycleganWorker(self)
+        # self.lstm_worker = LSTMWorker(self)
 
         # Event
-        generate_sentence_btn.clicked.connect(self.generate_sentence_handler)
-
-        # Timer
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.change_trend)
-        self.timer.start(5000)
+        generate_btn.clicked.connect(self.generate_handler)
 
 
     @property
@@ -221,14 +230,11 @@ class GUI(QWidget):
     def is_save(self):
         return self.save_checkbox.isChecked()
 
-    def change_trend(self):
-        if self.random_checkbox.isChecked():
-            next_idx = random.randrange(self.trend_combobox.count())
-            self.trend_combobox.setCurrentIndex(next_idx)
-
     def render_img(self, image):
         self.image.setPixmap(QPixmap.fromImage(image))
 
-    def generate_sentence_handler(self):
+    def generate_handler(self):
         self.is_running = True
-        self.threadpool.start(self.lstm_worker)
+        self.threadpool.start(self.app_worker)
+        # self.threadpool.start(self.cyclegan_worker)
+        # self.threadpool.start(self.lstm_worker)
