@@ -17,7 +17,6 @@ import traceback
 import config
 from cyclegan.data_loader import DataLoader
 from logger import logger
-from cyclegan.capturer import Capturer
 import util
 
 
@@ -25,7 +24,6 @@ class Predictor:
     def __init__(self, gui):
         self.gui = gui
         self.prev_src = None
-        self.capturer = None
         # self.prev_trend_idx = 0
         self.count = 0
 
@@ -183,23 +181,11 @@ class Predictor:
                 img_A = None
                 fake_B = None
 
-                if self.gui.is_capture():
-                    if self.capturer is None:
-                        self.capturer = Capturer()
-
-                    if self.capturer.frame is None:
-                        origin = np.zeros(self.img_shape, dtype=np.uint8)
-                    else:
-                        frame = self.capturer.frame
-                        origin = frame[60:420, 140:500]
-                        origin = cv2.resize(origin, dsize=(self.img_rows, self.img_cols))
-
-                else:
-                    paths = glob('%s/*.jpg' % input_images_dir)
-                    img_paths = np.random.choice(paths, size=1)
-                    img_array = np.fromfile(img_paths[0], dtype=np.uint8)
-                    origin = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-                    # origin = cv2.imread(img_paths[0])
+                paths = glob('%s/*.jpg' % input_images_dir)
+                img_paths = np.random.choice(paths, size=1)
+                img_array = np.fromfile(img_paths[0], dtype=np.uint8)
+                origin = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                # origin = cv2.imread(img_paths[0])
 
                 src = origin
 

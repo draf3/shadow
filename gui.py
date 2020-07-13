@@ -1,25 +1,42 @@
-import sys, random
+import random
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-import config
-from logger import logger
-from cyclegan.cyclegan_worker import CycleganWorker
 from cyclegan.predictor import Predictor as CycleGANPredictor
-from lstm.lstm_worker import LSTMWorker
 from lstm.predictor import Predictor as LSTMPredictor
 from lstm.trainer import Trainer
-from crawler.downloader import Downloader
 from app_worker import AppWorker
-from trend_store import TrendStore
+from trend import TrendStore, TrendFilter
+from osc_sender import OscSender
+from logger import logger
+import config
+
 
 class GUI(QWidget):
     def __init__(self):
         super().__init__()
+        self.init_ui()
 
-        self.is_running = False
+        self.trend_store = TrendStore()
+        self.trend_filter = TrendFilter(self.trend_store)
+        self.trainer = Trainer(self)
+        self.cyclegan_predictor = CycleGANPredictor(self)
+        self.lstm_predictor = LSTMPredictor(self)
 
+        # NetWork
+        self.osc_sender = OscSender(config.IP, config.PORT)
+
+        # Thread
+        self.threadpool = QThreadPool()
+        self.app_worker = AppWorker(self)
+
+        # Timer
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.change_trend)
+        self.timer.start(1000)
+
+    def init_ui(self):
         # Widget
         self.framerate_label = QLabel("frame rate")
         self.framerate_spinbox = QSpinBox()
@@ -58,7 +75,6 @@ class GUI(QWidget):
         self.blend_checkbox.setChecked(True)
         self.smaller_checkbox = QCheckBox('smaller', self)
         self.smaller_checkbox.setChecked(True)
-        self.capture_checkbox = QCheckBox('capture', self)
         self.save_checkbox = QCheckBox('save', self)
         self.save_checkbox.setChecked(True)
         self.image_input_label = QLabel("input")
@@ -66,17 +82,10 @@ class GUI(QWidget):
         self.image_output_label = QLabel("output")
         self.image = QLabel(self)
         # self.trend_combobox = QComboBox(self)
-
-        # for i, key in enumerate(config.TREND):
-        #     name = config.TREND[key]['NAME']
-        #     self.trend_combobox.addItem(name)
-
-        self.random_checkbox = QCheckBox('random', self)
         self.sentence_text = QLabel("", self)
         self.sentence_text.resize(512, 100)
         self.sentence_text.setWordWrap(True)
         generate_btn = QPushButton("generate", self)
-
         # Layout
         framerate_hbox = QHBoxLayout()
         framerate_hbox.addWidget(self.framerate_spinbox)
@@ -88,7 +97,6 @@ class GUI(QWidget):
         maxframe_hbox.addStretch(1)
         trend_hbox = QHBoxLayout()
         # trend_hbox.addWidget(self.trend_combobox)
-        trend_hbox.addWidget(self.random_checkbox)
         generate_hbox = QHBoxLayout()
         generate_hbox.addWidget(generate_btn)
         blur_hbox = QHBoxLayout()
@@ -113,7 +121,6 @@ class GUI(QWidget):
         image_hbox.addWidget(self.image_input_label)
         image_hbox.addWidget(self.image_preprocess_label)
         image_hbox.addWidget(self.image_output_label)
-
         vbox = QVBoxLayout()
         vbox.addLayout(image_hbox)
         vbox.addWidget(self.image)
@@ -127,33 +134,18 @@ class GUI(QWidget):
         vbox.addWidget(self.invert_checkbox)
         vbox.addWidget(self.blend_checkbox)
         vbox.addWidget(self.smaller_checkbox)
-        vbox.addWidget(self.capture_checkbox)
         vbox.addWidget(self.save_checkbox)
         vbox.addLayout(generate_hbox)
         vbox.addWidget(self.sentence_text)
         self.setLayout(vbox)
 
+        # Event
+        generate_btn.clicked.connect(self.generate_handler)
+
         # Window
         # self.setGeometry(300, 300, 532, 440)
         self.title = 'shadow app'
         self.show()
-
-        self.trend_store = TrendStore()
-        self.trainer = Trainer(self)
-        self.cyclegan_predictor = CycleGANPredictor(self)
-        self.lstm_predictor = LSTMPredictor(self)
-
-
-        # Thread
-        self.threadpool = QThreadPool()
-        self.app_worker = AppWorker(self)
-        # self.downloader = Downloader(self)
-        # self.cyclegan_worker = CycleganWorker(self)
-        # self.lstm_worker = LSTMWorker(self)
-
-        # Event
-        generate_btn.clicked.connect(self.generate_handler)
-
 
     @property
     def framerate(self):
@@ -224,9 +216,6 @@ class GUI(QWidget):
     def is_smaller(self):
         return self.smaller_checkbox.isChecked()
 
-    def is_capture(self):
-        return self.capture_checkbox.isChecked()
-
     def is_save(self):
         return self.save_checkbox.isChecked()
 
@@ -234,7 +223,9 @@ class GUI(QWidget):
         self.image.setPixmap(QPixmap.fromImage(image))
 
     def generate_handler(self):
-        self.is_running = True
         self.threadpool.start(self.app_worker)
-        # self.threadpool.start(self.cyclegan_worker)
-        # self.threadpool.start(self.lstm_worker)
+
+    def change_trend(self):
+        trend = self.trend_filter.random_select()
+        self.osc_sender.send(config.OUTPUT_IMAGES_ADDR, trend['output_images_dir'])
+        self.osc_sender.send(config.OUTPUT_AUDIOS_ADDR, trend['output_audios_dir'])

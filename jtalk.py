@@ -16,7 +16,6 @@ class JTalk:
         self.htsvoice = ['-m', OPENJTALK_VOICEPATH]
         self.speed = ['-r', '1']
         self.count = 0
-        # self.prev_trend_idx = 0
 
     def say(self, sentence, output_audios_dir):
         try:

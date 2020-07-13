@@ -1,6 +1,6 @@
 from threading import Lock, Thread
 from logger import logger
-import json, random, datetime
+import json, random, datetime, time
 import config
 
 class Trend:
@@ -12,6 +12,7 @@ class Trend:
                  lstm_model_path='',
                  output_images_dir='',
                  output_audios_dir='',
+                 unixtime=0.0,
                  created_at=''):
 
         self.id = id
@@ -21,6 +22,7 @@ class Trend:
         self.lstm_model_path = lstm_model_path
         self.output_images_dir = output_images_dir
         self.output_audios_dir = output_audios_dir
+        self.unixtime = unixtime
         self.created_at = created_at
 
 
@@ -60,7 +62,7 @@ class TrendStore(metaclass=TrendStoreBase):
             database = []
             id = 0
 
-        database.insert(0, {
+        database.append({
             'id': id,
             'title': trend.title,
             'input_texts_path': trend.input_texts_path,
@@ -68,10 +70,14 @@ class TrendStore(metaclass=TrendStoreBase):
             'lstm_model_path': trend.lstm_model_path,
             'output_images_dir': trend.output_images_dir,
             'output_audios_dir': trend.output_audios_dir,
+            'unixtime': time.time(),
             'created_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         })
 
         json.dump(database, open(config.TREND_DATA, mode='w', encoding='utf-8'), indent=4, ensure_ascii=False)
+
+    def get_database(self):
+        return self.load()
 
     def get_data(self, idx):
         database = self.load()
@@ -90,6 +96,30 @@ class TrendStore(metaclass=TrendStoreBase):
             length = 0
 
         return length
+
+
+class TrendFilter:
+    def __init__(self, trend_store):
+        self.trend_store = trend_store
+        self.selected_id = []
+
+    def random_select(self):
+        def reset():
+            for trend in self.trend_store.get_database():
+                trend_day = int(trend['unixtime'] / 60 / 60 / 24)
+                now_day = int(time.time() / 60 / 60 / 24)
+                if trend_day < now_day:
+                    self.selected_id.append(trend['id'])
+
+        if len(self.selected_id) == 0:
+            reset()
+
+        logger.debug(self.selected_id)
+        idx = random.choices(self.selected_id)[0]
+        trend = self.trend_store.get_data(idx)
+        self.selected_id.remove(idx)
+
+        return trend
 
 
 if __name__ == '__main__':
