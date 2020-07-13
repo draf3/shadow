@@ -4,73 +4,72 @@ from keras.layers import Dense, Activation
 from keras.layers import LSTM
 from keras.optimizers import RMSprop
 import tensorflow as tf
-from tensorflow.python.keras.backend import set_session, clear_session
+from tensorflow.python.keras.backend import set_session
 import numpy as np
 import sys
 import io
-import time
 import config
-from utils.logger import logger
-from blinker import signal
+from logger import logger
 import re
 import random
 from PyQt5.QtWidgets import *
 import traceback
 
-class Predictor:
-    def __init__(self, trend_id, text_path, model_path):
+
+class Predictor():
+    def __init__(self, gui):
         self.sess = tf.Session()
         self.graph = tf.get_default_graph()
         set_session(self.sess)
+        self.gui = gui
 
-        self.trend_id = trend_id
+    def setup(self, input_texts_path, lstm_model_path):
+        with self.graph.as_default():
+            set_session(self.sess)
+            with io.open(input_texts_path, encoding='utf-8') as f:
+                self.text = f.read().lower()
+            logger.debug(f'corpus length:{len(self.text)}')
 
-        with io.open(text_path, encoding='utf-8') as f:
-            self.text = f.read().lower()
-        logger.debug(f'corpus length:{len(self.text)}')
+            self.end_point_indexes = [str.end() for str in re.finditer('。', self.text)]
 
-        self.end_point_indexes = [str.end() for str in re.finditer('。', self.text)]
+            self.chars = sorted(list(set(self.text)))
+            logger.debug(f'total chars:{len(self.chars)}')
 
-        self.chars = sorted(list(set(self.text)))
-        logger.debug(f'total chars:{len(self.chars)}')
+            self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
+            self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
-        self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
-        self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
+            self.max_sentence = 200
+            self.maxlen = 10
+            self.temperature = 0.2
+            step = 1
+            sentences = []
+            next_chars = []
 
-        self.max_sentence = 200
-        self.maxlen = 10
-        self.temperature = 0.2
-        step = 1
-        sentences = []
-        next_chars = []
+            for i in range(0, len(self.text) - self.maxlen, step):
+                sentences.append(self.text[i: i + self.maxlen])
+                next_chars.append(self.text[i + self.maxlen])
+            logger.debug(f'nb sequences:{len(sentences)}')
+            logger.debug(sentences)
+            logger.debug(next_chars)
 
-        for i in range(0, len(self.text) - self.maxlen, step):
-            sentences.append(self.text[i: i + self.maxlen])
-            next_chars.append(self.text[i + self.maxlen])
-        logger.debug(f'nb sequences:{len(sentences)}')
-        logger.debug(sentences)
-        logger.debug(next_chars)
+            logger.debug('Vectorization...')
+            x = np.zeros((len(sentences), self.maxlen, len(self.chars)), dtype=np.bool)
+            y = np.zeros((len(sentences), len(self.chars)), dtype=np.bool)
+            for i, sentence in enumerate(sentences):
+                for t, char in enumerate(sentence):
+                    x[i, t, self.char_indices[char]] = 1
+                y[i, self.char_indices[next_chars[i]]] = 1
 
-        logger.debug('Vectorization...')
-        x = np.zeros((len(sentences), self.maxlen, len(self.chars)), dtype=np.bool)
-        y = np.zeros((len(sentences), len(self.chars)), dtype=np.bool)
-        for i, sentence in enumerate(sentences):
-            for t, char in enumerate(sentence):
-                x[i, t, self.char_indices[char]] = 1
-            y[i, self.char_indices[next_chars[i]]] = 1
+            self.model = Sequential()
+            self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
+            self.model.add(Dense(len(self.chars)))
+            self.model.add(Activation('softmax'))
 
-        self.model = Sequential()
-        self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
-        self.model.add(Dense(len(self.chars)))
-        self.model.add(Activation('softmax'))
+            self.model.load_weights(lstm_model_path)
 
-        self.model.load_weights(model_path)
+            optimizer = RMSprop(lr=0.01)
+            self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
-        optimizer = RMSprop(lr=0.01)
-        self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-
-        self.on_predicted_sentence = signal(config.EVENT['ON_PREDICTED_SENTENCE'])
-        self.on_start_jtalk = signal(config.EVENT['ON_START_JTALK'])
 
     def sample(self, preds, temperature=1.0):
         preds = np.asarray(preds).astype('float64')
@@ -80,8 +79,7 @@ class Predictor:
         probas = np.random.multinomial(1, preds, 1)
         return np.argmax(probas)
 
-    def predict(self, _):
-        # logger.debug(f'id: {self.trend_id}, predict.')
+    def predict(self):
         with self.graph.as_default():
             set_session(self.sess)
 
@@ -119,10 +117,7 @@ class Predictor:
                 print(traceback.format_exc())
 
             finally:
-                if not generated:
-                    generated = ''
-                self.on_predicted_sentence.send(sentence=generated)
-                self.on_start_jtalk.send(sentence=generated)
+                return generated
 
     def generate_character(self, diversity, sentence, generated):
         x_pred = np.zeros((1, self.maxlen, len(self.chars)))
@@ -139,9 +134,4 @@ class Predictor:
         sys.stdout.write(next_char)
         sys.stdout.flush()
 
-
-
         return new_sentence, new_generated, next_char
-
-    def __repr__(self):
-        return '<AltProcessor %s>' % self.trend_id

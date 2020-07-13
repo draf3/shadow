@@ -1,9 +1,0 @@
-beautifulsoup4<=4.7.1
-feedparser<=5.2.1
-requests<=2.21.0
-pandas<=1.0.1
-pyquery<=1.4.1
-mecab<=0.996.2
-lxml<=4.3.2
-selenium<=3.141.0
-pytrends<=4.7.2
