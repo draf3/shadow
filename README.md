@@ -1,10 +1,11 @@
 # Shadow App
 
 ## 環境構築
-Anaconda（Miniconda）をインストールしてください。
+Anacondaのenvファイルを使って環境構築を行います。
+そのため、Anaconda（Miniconda）をインストールしてください。
 
-その後、下記コマンドを実行することで、  
-Anacondaでshadowという名前の環境が作られ、`keras-contrib`がインストールされます。
+次に下記コマンドを実行し、  
+Anacondaでshadowという名前の環境を作り、`keras-contrib`をインストールします。
 ```
 $ conda env create -n shadow -f env.yml
 $ pip install git+https://www.github.com/keras-team/keras-contrib.git
@@ -12,11 +13,11 @@ $ pip install git+https://www.github.com/keras-team/keras-contrib.git
 
 ## アプリの実行
 
-アプリを実行するには、まず環境を`shadow`に切り替えてください。
+アプリを実行するため、環境を`shadow`に切り替えてください。
 ```
 $ conda activate shadow
 ```
-切り替わったことが確認できたら、プロジェクトのルートディレクトリに移動します。
+次にプロジェクトのルートディレクトリに移動します。
 
 ```
 $ cd C:\path\to\shadow
@@ -28,16 +29,16 @@ $ python main.py
 ```
 
 ## 送信データ
-プロトコルはOSCを使用しています。  
-生成した`.jpg`、`.wav`が格納させた2つのディレクトリパスを、それぞれ該当するアドレスに送信します。
+プロトコルはOSCを使っています。  
+画像と音声が格納された2つのディレクトリパスを、設定したアドレスに送信します。  
+ip、port、addresはGUIウィンドウから変更することが出来ます。
+
+| ip | port | address       | type   | msg                  |
+| ---- | ---- | ------------- | ------ | --------------------- |
+| 127.0.0.1 | 10000 | /output_images_dir | string | "C:\path\to\output_images" |
+| 127.0.0.1 | 10000 | /output_audios_dir | string | "C:\path\to\output_audios" |
 
 
-| port | address       | type   | msg                   |
-| ---- | ------------- | ------ | --------------------- |
-| 10000 | /output_images_dir | string | "C:\path\to\output_images" |
-| 10000 | /output_audios_dir | string | "C:\path\to\output_audios" |
-
-GUIウィンドウからも変更することが出来ます。
 
 ## 保存データ
 dataディレクトリ配下にリソースを保存します。
