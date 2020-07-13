@@ -99,7 +99,8 @@ class TrendStore(metaclass=TrendStoreBase):
 
 
 class TrendFilter:
-    def __init__(self, trend_store):
+    def __init__(self, gui, trend_store):
+        self.gui = gui
         self.trend_store = trend_store
         self.selected_id = []
 
@@ -108,7 +109,9 @@ class TrendFilter:
             for trend in self.trend_store.get_database():
                 trend_day = int(trend['unixtime'] / 60 / 60 / 24)
                 now_day = int(time.time() / 60 / 60 / 24)
-                if trend_day < now_day:
+                diff_day = now_day - trend_day
+                # print(now_day, trend_day)
+                if diff_day >= self.gui.send_data_days_ago:
                     self.selected_id.append(trend['id'])
 
         if len(self.selected_id) == 0:

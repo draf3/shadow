@@ -1,3 +1,4 @@
+import time
 from PyQt5.QtCore import QRunnable, pyqtSlot
 from app import App
 
@@ -12,3 +13,4 @@ class AppWorker(QRunnable):
     def run(self):
         while True:
             self.app.run()
+            time.sleep(self.gui.gen_waiting_time * 60)

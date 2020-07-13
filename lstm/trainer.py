@@ -22,6 +22,8 @@ class Trainer:
         self.gui = gui
         self.sess = tf.Session()
         self.graph = tf.get_default_graph()
+        self.batch_size = 128
+        self.epochs = 100
         set_session(self.sess)
 
     def train(self, input_texts_path, lstm_model_path):
@@ -71,7 +73,7 @@ class Trainer:
             model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
             # 学習を開始する
-            history = model.fit(x, y, batch_size=128, epochs=3)
+            history = model.fit(x, y, batch_size=self.batch_size, epochs=self.epochs)
 
             # モデルの重みを保存する
             self.save_model_weights(model, lstm_model_path)

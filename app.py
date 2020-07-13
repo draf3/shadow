@@ -13,15 +13,13 @@ class App:
         self.gui = gui
         self.jtalk = JTalk(gui)
         self.RSS_URL = 'https://trends.google.co.jp/trends/trendingsearches/daily/rss?geo=JP'
-        self.CRAWL_NUM = 5 # image crawl
-        self.TWEET_NUM = 100 # number of tweets
-        self.IMAGE_NUM = 10
-        self.AUDIO_NUM = 5
-        self.IMAGE_SIZE = 256
-        self.googlesearch = GoogleSearch()
+        # self.CRAWL_NUM = 5 # image crawl
+        # self.TWEET_NUM = 100 # number of tweets
+        # self.IMAGE_NUM = 10
+        # self.AUDIO_NUM = 5
+        self.image_size = 256
+        self.googlesearch = GoogleSearch(gui)
         self.twittersearch = TwitterSearch()
-        # NetWork
-        self.osc_sender = OscSender(config.IP, config.PORT)
 
     ##### @takagi
     ##### Main block
@@ -36,18 +34,18 @@ class App:
         tweet_list = []
         trend_count = 0
         for t in trend_list:
-            tweets = self.twittersearch.search_tweet(t, self.TWEET_NUM)
+            tweets = self.twittersearch.search_tweet(t, self.gui.dl_tweet_count)
             tweet_list.append(tweets)
             # logger.debug(t, tweets, pn)
             trend_count += 1
-            if trend_count > self.CRAWL_NUM:
+            if trend_count > self.gui.trend_count:
                 break
 
         # タイムスタンプを作成する
         now = util.date_str()
 
         # データを作成する
-        for i in range(self.CRAWL_NUM):
+        for i in range(self.gui.trend_count):
 
             # ファイルを格納するパスを作成
             input_text_dir = os.path.join(config.INPUT_TEXT_DIR, now)
@@ -80,11 +78,11 @@ class App:
             # ツイートとトレンド画像をダウンロードする
             util.save_texts(tweet_list[i], input_texts_path)
             self.googlesearch.download_google_staticimages(trend_list[i], input_image_dir)
-            util.resize_square_images(input_image_dir, self.IMAGE_SIZE)
+            util.resize_square_images(input_image_dir, self.image_size)
 
             # 画像を生成する
             self.gui.cyclegan_predictor.count = 0
-            for i in range(self.IMAGE_NUM):
+            for i in range(self.gui.gen_image_count):
                 self.gui.cyclegan_predictor.predict(input_image_dir, output_image_dir)
 
             # LSTMモデルを生成する
@@ -93,13 +91,10 @@ class App:
             # 音声を生成する
             self.gui.lstm_predictor.setup(input_texts_path, lstm_model_path)
             self.jtalk.count = 0
-            for i in range(self.AUDIO_NUM):
+            for i in range(self.gui.gen_audio_count):
                 sentence = self.gui.lstm_predictor.predict()
+                self.gui.sentence = sentence
                 self.jtalk.say(sentence, output_audio_dir)
-
-            # データを送信する
-            # self.osc_sender.send(config.OUTPUT_IMAGES_ADDR, output_image_dir)
-            # self.osc_sender.send(config.OUTPUT_AUDIOS_ADDR, output_audio_dir)
 
 
 

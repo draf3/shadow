@@ -26,10 +26,11 @@ class GoogleSearch:
     Googleからデータを取得するクラス
 
     '''
-    def __init__(self):
+    def __init__(self, gui):
         ##### for google image search
+        self.gui = gui
         self.dummycount = 20  ##### first 20 images' urls in google search is not url start from 'https://'
-        self.maxcount = 100
+        # self.maxcount = 100
         self.tryNum = 5
         self.chromedriver = 'C://Program Files//chromedriver.exe'
         self.Google_trend_list = []
@@ -100,7 +101,7 @@ class GoogleSearch:
 
         urls = []
 
-        imageLen = min(len(images), self.dummycount + self.maxcount)
+        imageLen = min(len(images), self.dummycount + self.gui.dl_image_count)
         if imageLen == 0:
             return 0
 

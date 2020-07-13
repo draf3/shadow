@@ -11,12 +11,6 @@ OUTPUT_IMAGE_DIR = os.path.join(DATA_DIR, 'output_images')
 OUTPUT_AUDIO_DIR = os.path.join(DATA_DIR, 'output_audios')
 TREND_DATA = os.path.join(DATA_DIR, 'trend.json')
 
-# NetWork
-IP = '127.0.0.1'
-PORT = 10000
-OUTPUT_IMAGES_ADDR = '/output_images_dir'
-OUTPUT_AUDIOS_ADDR = '/output_audios_dir'
-
 # Logger
 LOGGING_LEVEL = {
     'DEBUG': logging.DEBUG,
