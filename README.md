@@ -42,28 +42,33 @@ GUIウィンドウからも変更することが出来ます。
 ## 保存データ
 dataディレクトリ配下にリソースを保存します。
 - input_images
-  - トレンドで検索しダウンロードした画像データ。jpgファイル
+  - トレンドで検索しダウンロードしたjpg画像を格納。
+  - ファイル名は0,1,2...の連番
 - input_text
-  - トレンドで検索しダウンロードしたTweetテキスト。txtファイル
+  - トレンドで検索しダウンロードしたTweetのtxtファイルを格納。
+  - ファイル名はトレンド名
 - lstm_models
-  - トレンドのTweetテキストから生成したLSTMモデル。h5ファイル
+  - トレンドのTweetテキストから生成したLSTMモデルを格納。
+  - ファイル名は0,1,2...の連番
 - output_audios
-  - トレンドのTweetテキストから生成した音声データ。wavファイル
+  - トレンドのTweetテキストから生成したwavファイルを格納。
+  - ファイル名は0,1,2...の連番
 - output_images
-  - トレンド画像から生成した画像。jpgファイル
+  - トレンド画像から生成した画像を格納。jpgファイル
+  - ファイル名は0,1,2...の連番
 
 ## GUIウィンドウ
 ![app view](images/app_view.png)
 
 ### App Config
 - download tweet count
-  - ダウンロードするツイート数
+  - 設定した数だけツイートをダウンロードする
 - download image count
   - 設定した数だけ画像をダウンロードする
 - trend count
   - トレンドワードのリミット数を設定する
 - generate image count
-  - 画像の生成に用いる画像の枚数
+  - 画像の生成に用いる画像の枚数を設定する
 - generate audio count
   - 設定した数だけオーディオデータを生成する
 - generate waiting time(min)
@@ -71,6 +76,7 @@ dataディレクトリ配下にリソースを保存します。
 - send data interval(sec)
   - 設定した時間毎にOSCで送信する
 - send data(days ago)
+  - 設定した日数より前のデータを選択し送信する
 
 ### Image and Audio
 - frame rate
@@ -96,13 +102,13 @@ dataディレクトリ配下にリソースを保存します。
   
 ### Network
 - ip
-  - 送信先のIPを設定する
+  - 送信先のIPを設定する。初期値は '127.0.0.1'
 - port
-  - 送信先のPORTを設定する
+  - 送信先のPORTを設定する。初期値は 10000
 - output_images_addr
-  - 画像ディレクトリの送信先のアドレスを設定する
+  - 画像ディレクトリの送信先のアドレスを設定する。初期値は '/output_images_dir'
 - output_audios_addr
-  - オーディオディレクトリの送信先のアドレスを設定する
+  - オーディオディレクトリの送信先のアドレスを設定する。初期値は '/output_audios_dir'
   
 ### Other
 - generate
