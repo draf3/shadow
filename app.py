@@ -21,8 +21,6 @@ class App:
         self.googlesearch = GoogleSearch(gui)
         self.twittersearch = TwitterSearch()
 
-    ##### @takagi
-    ##### Main block
     # Trendに関連した、Tweet、imageを保存する
     def run(self):
         t0 = time.time()

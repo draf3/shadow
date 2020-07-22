@@ -11,6 +11,9 @@ $ conda env create -n shadow -f env.yml
 $ pip install git+https://www.github.com/keras-team/keras-contrib.git
 ```
 
+クロールを行うため、自分のChormeのバージョンに対応したChromeDriverをダウンロードし、下記のパスに配置します。  
+`C://Program Files//chromedriver.exe`
+
 ## アプリの実行
 
 アプリを実行するため、環境を`shadow`に切り替えてください。
