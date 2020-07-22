@@ -251,6 +251,8 @@ class GUI(QWidget):
         # Event
         generate_btn.clicked.connect(self.generate_handler)
         self.send_data_interval_spinbox.valueChanged.connect(self.update_send_data_interval)
+        self.ip_edit.textChanged.connect(self.change_network)
+        self.port_edit.textChanged.connect(self.change_network)
 
         # Window
         # self.setGeometry(300, 300, 532, 600)
@@ -390,3 +392,6 @@ class GUI(QWidget):
         trend = self.trend_filter.random_select()
         self.osc_sender.send(self.output_images_addr, trend['output_images_dir'])
         self.osc_sender.send(self.output_audios_addr, trend['output_audios_dir'])
+
+    def change_network(self):
+        self.osc_sender = OscSender(self.ip, self.port)
