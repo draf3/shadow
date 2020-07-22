@@ -8,9 +8,9 @@ import traceback
 class JTalk:
     def __init__(self, gui):
         self.gui = gui
-        OPENJTALK_BINPATH = 'c:/open_jtalk/bin'
-        OPENJTALK_DICPATH = 'c:/open_jtalk/dic'
-        OPENJTALK_VOICEPATH = 'C:/open_jtalk/voice/m001/nitech_jp_atr503_m001.htsvoice'
+        OPENJTALK_BINPATH = './open_jtalk/bin'
+        OPENJTALK_DICPATH = './open_jtalk/dic'
+        OPENJTALK_VOICEPATH = './open_jtalk/voice/m001/nitech_jp_atr503_m001.htsvoice'
         self.open_jtalk = [OPENJTALK_BINPATH + '/open_jtalk.exe']
         self.mech = ['-x', OPENJTALK_DICPATH]
         self.htsvoice = ['-m', OPENJTALK_VOICEPATH]
